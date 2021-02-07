@@ -1,0 +1,116 @@
+<?xml version="1.0" ?>
+<!-- (C) Keysight Technologies 2009-2017 -->
+<qam_setup_spec version="1.1.1" ts="20110523_082134" >
+  <u_options>
+    <user_option
+      type = "type"
+      key  = "key"
+      expr = "expr"
+    />
+  </u_options>
+  
+  <design_info 
+    netlist            = "netlist"
+    job_type           = "2"
+    job_dir            = "_scr_jsdir_tag_"
+    license_data       = ""
+    parallel_type      = "0"
+    num_parallel       = "4"
+    queue_name         = ""
+    opt_project        = ""
+    opt_requirements   = ""
+    opt_misc           = ""
+    status_timeout     = "-1"
+    opt_queue          = ""
+    opt_pool           = ""
+    opt_slot           = ""
+    click_to_start     = "0"
+    blk                = "blk"
+    mc                 = "mc"
+  />
+  
+  <trial_options 
+    total_run_time            = "0.0"
+    auto_kill                 = "99:00:00"
+    num_trials                = "1"
+    start_trial               = "1"
+    seed                      = "43119"
+    run_nominal               = "0"
+    run_estimate              = "0"
+    estimate_in_filepath      = ""
+    estimate_out_filepath     = ""
+    estimate_include_filepath = ""
+    dlmt_other_args           = "-parallel::::-license_data 3:86407:15"
+  />
+  
+  <scr_job_set  
+    js_id    = "_scr_js_id_"
+    tag      = "_scr_js_tag_"
+    js_dir   = "_scr_jsdir_tag_"
+    sim_type = "0"
+    in_seq   = "0"
+  >
+    <scr_job
+        tag       = "init"
+        cmd       = "no_op"
+        dlmt_args = ""
+    />
+
+    <dummy_scr_job
+        tag       = "lna_CR"
+        job_dir   = "/tmp/qam_dummy"
+        cmd       = "date &lt; dummy.out"
+        dlmt_args = ""
+    />
+    
+<!-- _scr_job_ -->
+
+  </scr_job_set>
+  
+  <status_patterns>
+    <pat 
+      level="1"
+      status="Reading file"
+    >JS Reading</pat>
+    <pat 
+      level="2"
+      status="&lt;font color=&quot;red&quot;&gt;License NOT Available&lt;/font&gt;"
+    ><![CDATA[will continue trying for]]></pat>
+    <pat 
+      level="3"
+      status=""
+    ><![CDATA[Licensing Information: Feature obtained]]></pat>
+    <pat
+      level="5"
+      status="Parsing ..."
+    ><![CDATA[Executing: gpp]]></pat>
+    <pat
+      level="6"
+      status="Parallel Job: Queued"
+    ><![CDATA[Job state = 'QUEUED_HEAD']]></pat>
+    <pat
+      level="7"
+      status="Parallel Job: Running"
+    ><![CDATA[Job state = 'RUNNING_]]></pat>
+    <pat
+      level="8"
+      status="Parallel Job: Complete"
+    ><![CDATA[Job Summary: ]]></pat>
+    <pat
+      level="15"
+      status="Simulation: Reading file ... "
+    ><![CDATA[Reading file           :]]></pat>
+    <pat
+      level="20"
+      status="Simulation:  Performing kernel setup ... "
+    ><![CDATA[Performing kernel setup...]]></pat>
+    <pat
+      level="25"
+      status="Simulation:  Analysis ... "
+    ><![CDATA[Analysis type:]]></pat>
+    <pat level="100"
+      status="Done"
+    >JS Done</pat>
+  </status_patterns>
+  
+</qam_setup_spec>

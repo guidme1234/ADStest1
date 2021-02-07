@@ -1,0 +1,72 @@
+#! /usr/bin/env python
+
+# Copyright (C) 2011 - 2012 Keysight Technologies, Inc
+import getpass
+import socket
+import os
+import sys
+import datetime
+import subprocess
+
+
+#usrid=`whoami`
+usrid = getpass.getuser()
+
+#hstid=`hostname`
+if socket.gethostname().find('.')>=0:
+    hstid = socket.gethostname()
+else:
+    hstid = socket.gethostbyaddr(socket.gethostname())[0]
+
+#prcid="$$"
+prcid = os.getpid()
+
+#log_fname=`mktemp -t ${usrid}_${hstid}_${prcid}.XXXXXXXX`
+log_fname = str(usrid) + '_' + str(hstid) + '_' + str(prcid)
+fd_log_fname = open(log_fname, 'w+')
+if not fd_log_fname:
+    #print "Unable to open ", fd_log_fname
+    sys.exit(1)
+
+#if [ "$?" != "0" ] ; then
+#    echo 1>&2 "$Error: $0: unable to create log file."
+#    exit 1
+#fi
+
+#placeholder
+#echo -n "ADS Simulation Manager (ads)" >> $log_fname
+#echo -n " " >> $log_fname
+#date >> $log_fname
+
+fd_log_fname.write('ADS Simulation Manager (ads) ')
+right_now = datetime.datetime.utcnow()
+fd_log_fname.write(str(right_now.year) + '_' + str(right_now.month) + '_' + str(right_now.day) + '_' + str(right_now.hour) + '_' + str(right_now.minute) + '_' + str(right_now.second) + '_' + str(right_now.microsecond))
+fd_log_fname.write('\n')
+
+#DBG:
+#echo "DBG: psm: args: $@"
+
+M_ARGS=""
+#if [ ! -z "$PSM_M_ARGS" ] ; then
+#    M_ARGS=$PSM_M_ARGS
+#fi
+PSM_M_ARGS = os.environ.get('PSM_M_ARGS')
+if PSM_M_ARGS:
+    M_ARGS = PSM_M_ARGS
+
+#exec mscUtils.py psm_ads "$M_ARGS" -ht ads -log $log_fname "$@" 
+XPEDION = os.environ.get('XPEDION')
+XPEDION_PLATFORM = os.environ.get('XPEDION_PLATFORM')
+sim_mgr_python_exe = os.path.abspath(XPEDION + '/thirdparty/python/' + XPEDION_PLATFORM + '/bin/python.exe')
+mscUtils_pyc_file = os.path.abspath(XPEDION + '/' + XPEDION_PLATFORM + '/python/mscUtils.pyc') 
+#cmd = [sim_mgr_python_exe, mscUtils_pyc_file, 'psm_ads', M_ARGS, '-ht', 'ads', '-log', log_fname]
+cmd = [sim_mgr_python_exe, mscUtils_pyc_file, 'psm_ads', M_ARGS, '-ht', 'ads']
+cmd = cmd + sys.argv[1:] ## Has to be this way to put it into one long list
+# Remove any blank strings in the cmd list
+cmd.remove('')
+str1 = ' '.join(cmd)
+#print str1
+#sys.exit(1)
+os.system(str1)
+#subprocess.call(cmd)
+

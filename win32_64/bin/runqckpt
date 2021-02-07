@@ -1,0 +1,17 @@
+#! /bin/sh -
+
+# Copyright (C) 2009 - 2012 Keysight Technologies, Inc
+
+if [ -n "$K2_SIM_RUN" ]; then
+    #k2 launching individual sims
+	
+    exit 0
+fi
+
+if type qckpt 1>/dev/null 2>&1 ; then
+    #qckpt flow
+    exec qckpt "$@"
+else
+    echo "Error: GDE setup failed."
+    exit 1
+fi

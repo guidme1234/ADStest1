@@ -1,0 +1,342 @@
+#! /bin/sh -
+
+# Copyright (C) 2009 - 2012 Keysight Technologies, Inc
+
+#####################################################################
+#
+#  Script to invoke Q Prog.
+#  
+#####################################################################
+
+
+if [ $# -eq 0 ]; then
+	echo 1>&2 "Usage: $0 <options>"
+	echo 1>&2 "       for help run: $0 -help"
+	exit 1
+fi
+
+#TODO: update with options
+if test "x$1x" = "x-helpx" || test "x$1x" = "x-hx" || test "x$1x" = "x--helpx"; then
+    echo "Usage: $0 <netlist_file> other_options"
+    echo
+    echo "Options:"
+    echo ""
+    echo "   -h"
+    echo "   -help             All provide this output"
+    echo "   --help"
+    echo "   [-qorner_pi <pi>]"
+    echo "   <-tb>"
+    echo "   -nl <netlist_file>"
+    echo "   [-corners <arg>]"
+    echo "   [-LC <license context>]"
+    echo ""
+    exit 0
+fi
+
+#test for marker
+testDone()
+{
+    if [ -f "${qnl_dir}/${job_done_file_marker}" ]; then
+	ret_code=1
+	cat ${qnl_dir}/${job_done_file_marker}
+	tcount=`grep -c "Terminated" ${qnl_dir}/${job_done_file_marker}`
+	if [ "$tcount" = "0" ] ; then
+	    ret_code=0
+	fi
+
+	#remove 
+	rm -f ${qnl_dir}/${job_done_file_marker}
+
+	#break;
+	done_code=1
+    else
+	done_code=0
+    fi
+}
+
+#clean up on intr
+onIntr()
+{
+    echo "exit" > $qorner_pi; 
+    sleep 1
+    testDone
+
+    #restore defualt
+    trap 2
+    kill -2 $$
+}
+
+
+#trap signals
+trap onIntr 1 2 3 10 15
+
+flow_type="0"
+auto_flow="0"
+qorner_pi=""
+tbCreate=
+netlist=""
+corners=""
+license_context=""
+
+other_args=
+
+curr_dir=`pwd`
+psf_dir=${curr_dir}/../psf
+
+csp_fname=`mktemp -t qr.XXXXXXXX`
+if [ "$?" != "0" ] ; then
+    echo 1>&2 "$Error: $0: unable to create csp file."
+    exit 1
+fi
+
+soc_fname=`mktemp -t qrs.XXXXXXXX`
+if [ "$?" != "0" ] ; then
+    echo 1>&2 "$Error: $0: unable to create sb_soc file."
+    exit 1
+fi
+
+auto_res_save_fname="gde_sb.csv"
+job_done_file_marker=".gde_sb_done_$$"
+
+#dbg mode
+if test "${XPEDION_K2_DBG:+set}" != set ; then
+    k2_dbg=
+else
+    k2_dbg="1"
+    echo "Info: GDE dbg mode"
+fi
+
+#redir qam output
+if test "${XPEDION_K2_QAM_LOG:+set}" != set ; then
+    qam_log=/dev/null
+else
+    qam_log=${XPEDION_K2_QAM_LOG}
+    echo "Info: redirecting qam output to: ${qam_log}"
+fi
+
+#corners mode via env var
+if test "${GDE_CORNERS:+set}" = set ; then
+    corners=${GDE_CORNERS}
+    echo "Info: GDE Corners e-var set (${GDE_CORNERS})"
+fi
+
+# Return code
+ret_code=1
+done_code=0
+
+# Process other args here...
+
+# Examine each argument
+while test $# -gt 0
+do
+  arg="$1"
+  shift
+
+  case $arg in
+      -aflow)
+#	  auto_flow="1"
+	  flow_type="$1"
+	  shift
+	  ;;
+      -qorner_pi)
+	  qorner_pi="$1"
+	  shift
+	  ;;
+      -tb)
+	  tbCreate="1"
+	  ;;
+      -nl)
+	  if [ -n "$netlist" ] ; then
+	      netlist="$netlist -nl $1"
+	  else 
+	      netlist="-nl $1"
+	  fi
+	  shift
+	  ;;
+      -corners)
+	  corners="$1"
+	  shift
+	  ;;
+      -LC)
+      license_context="-qargs -LC -qargs $1"
+      shift
+      ;;
+      *)
+	  # Everything else
+	  other_args="$other_args $arg"
+	  ;;
+  esac
+done
+
+#flow based dirs
+if [ "$flow_type" = "11" ] ; then
+    qnl_dir=${curr_dir}/../qnl
+else
+    qnl_dir=${curr_dir}/../../qnl
+fi
+
+
+#check necessary args
+if test "x$tbCreate" = "x"; then
+	echo 1>&2 "$0: -tb option missing."
+	exit 1
+fi
+
+if test "x$netlist" = "x"; then
+	echo 1>&2 "$0: -nl value NULL."
+	exit 1
+fi
+
+#clean prev. runs
+rm -f ${qnl_dir}/${job_done_file_marker} 1> /dev/null 2>&1
+
+
+#if no K2 reg var found, do default setup
+if test "${K2_REG_FILE:+set}" = set ; then
+    :
+    #ok, it's set
+else
+    k2init.py -defSetup ${k2_dbg:+-qargs -dbg -qargs 1} -qargs -ht -qargs 1 </dev/null 1>${qam_log} 2>&1
+    if [ "$?" != "0" ] ; then
+	echo "Error: GDE default setup failed."
+	exit 1
+    fi
+    K2_REG_FILE="$XPEDION_DOT_DIR/GDE/gde.ini"
+    export K2_REG_FILE
+fi
+
+
+#get qam going
+setsid k2init.py -reuse ${k2_dbg:+-qargs -dbg -qargs 1} -qargs -ht -qargs 1 $license_context </dev/null 1>${qam_log} 2>&1 &
+
+
+#wait for qam to initialize (unless already up)
+qamok=0
+for idx in `seq 1 20`; do
+    iret=`k2init.py -checkQam`
+    if [ "$iret" = "1" ] ; then
+	qamok=1
+	break
+    fi
+    sleep 1
+done
+
+if [ "$qamok" = "0" ] ; then
+    echo "Error: timeout waiting for GDE Simulation Manager to initialize."
+fi
+
+#generate .csp
+cmd="netlist2csp.py ${corners:+-corners $corners}"
+if [ "$flow_type" != "0" ] ; then
+    cmd="$cmd -fltype $flow_type"
+    echo "Info: using GDE autoflow."
+else
+    echo "Info: using GDE."
+fi
+cmd="$cmd $netlist -opf $csp_fname -opd $qnl_dir"
+#echo "DBG: run: $cmd"
+$cmd
+
+if [ $? -ne 0 ] ; then
+    echo 1>&2 "Error: $0: nl2csp failed."
+    exit 1
+fi
+
+
+#dbg mode
+if test "${XPEDION_K2_DBG:+set}" = set ; then
+
+    #save copy of tmp files
+    cp -f ${csp_fname} ${csp_fname}_dbg
+    cp -f ${soc_fname} ${soc_fname}_dbg
+fi
+
+#if qorner_pi NOT provided, launch fresh
+if test "x$qorner_pi" = "x"; then
+    cmd="qorner -detach -sf $soc_fname"
+    #echo "run: $cmd"
+    $cmd &
+
+    sleep 3
+
+    qorner_pi=`head -1 ${soc_fname}`
+fi
+
+if test "${XPEDION_K2_DBG:+set}" = set ; then
+    echo "DBG: qckpt pid: $$"
+    echo "DBG: qorner_pi: ${qorner_pi}"
+    echo "DBG: csp_fname: ${csp_fname}"
+    echo "DBG: soc_fname: ${soc_fname}"
+fi
+
+#remove tmp soc_fname file
+rm -f ${soc_fname}
+
+#set working dir
+echo "setCwd `pwd`" | qintcomm -sendStd ${qorner_pi}
+
+#if dbg mode set
+if test "${k2_dbg:+set}" = set ; then
+    echo "set -dbg $k2_dbg" | \
+	qintcomm -sendStd ${qorner_pi}
+    echo "DBG: qorner using dbg $k2_dbg"
+    sleep 1
+
+fi
+
+
+#load csp
+echo "loadCsp ${csp_fname}" | \
+	qintcomm -sendStd ${qorner_pi}
+
+if [ $? -eq 0 ] ; then
+    sent_data=1
+else
+    echo 1>&2 "Error: $0: GDE SB connection failed."
+    exit 1
+fi
+
+#remove csp file
+echo "sys sh -c \"sleep 10; rm -f ${csp_fname}\"" | \
+	qintcomm -sendStd ${qorner_pi}
+
+
+#exit check
+if [ "$flow_type" != "11" ] ; then
+    #exit code !=0 , else runsim will continue with gg
+    exit 1
+else
+    echo "set -doneMarker ${qnl_dir}/${job_done_file_marker}" | \
+	qintcomm -sendStd ${qorner_pi}
+    sleep 1
+fi
+
+#
+sleep 3;
+
+
+# busy wait until done
+while [ 1 = 1 ]; do
+    testDone
+    if [ "$done_code" = "1" ] ; then
+	break;
+    fi
+    sleep 3;
+done
+
+#save results
+echo "exportResToFile ${psf_dir}/${auto_res_save_fname}:_::_:," | \
+    qintcomm -sendStd ${qorner_pi}
+sleep 1
+
+for idx in `seq 1 20`; do
+    testDone
+    if [ "$done_code" = "1" ] ; then
+	break;
+    fi
+    sleep 3;
+done
+
+exit 1
+
+

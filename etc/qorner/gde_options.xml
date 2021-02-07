@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+<!-- (C) Keysight Technologies 2010-2017 -->
+<gde_options version="1.0.6" ts="20110324_160020" >
+
+  <ui_options
+    res_table_font_size = "10"
+  />
+
+  <misc_options
+    prompt_overwrite_res_dir = "1"
+    prompt_reuse_testbench   = "0"
+    append_testbench         = "0"
+    keep_qnl_dir             = "0"
+    keep_task_type           = "0"
+    click_to_launch          = "0"
+    lc_dds_data_files        = "1"
+  />
+
+</gde_options>

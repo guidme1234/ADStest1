@@ -1,0 +1,12 @@
+#! /bin/sh -
+
+# Copyright (C) 2008 - 2012 Keysight Technologies, Inc
+
+if [ -n "$HPEESOF_DIR" ]; then
+	# in case $HPEESOF_DIR/bin is not included in PATH...
+	PATH="$HPEESOF_DIR/bin":"$PATH"
+	export PATH
+fi
+
+. sim-bootscript.sh
+exec "$@"

@@ -1,0 +1,9 @@
+#! /bin/sh -
+
+# Copyright (C) 2004 - 2012 Keysight Technologies, Inc
+
+if [ "`uname`" = Linux -a "`uname -m`" = x86_64 ]; then
+	echo linux_x86_64
+else
+	echo unknown
+fi

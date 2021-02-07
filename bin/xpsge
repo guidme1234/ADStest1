@@ -1,0 +1,21 @@
+#! /bin/sh -
+
+# Copyright (C) 2007 - 2012 Keysight Technologies, Inc
+
+#############################################################################
+#
+# Script used internally when launching simulations to be run on a
+# Sun Grid Engine cluster (similar to LSF).   We to do this because
+# jobs submitted to SGE do not have the requisite environment variables
+# automatically passed to them.   Parameters to this script are the
+# command as it needs to be executed on the execution machine.
+#
+# NOTE:  this is not a general purpose wrapper script!   It was designed
+#        to be used in the context of running GoldenGate simulations,
+#        and has been tested for that purpose only.
+#
+#############################################################################
+
+# Our path must be as it was on the submitting machine.  SGE_O_PATH has
+# that information.  Run the program specified, with the arguments given.
+exec env PATH="$SGE_O_PATH" "$@"
